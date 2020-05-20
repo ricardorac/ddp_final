@@ -21,69 +21,72 @@ inTrain = createDataPartition(anthropometry$height, p = 0.8)[[1]]
 testing = anthropometry[-inTrain,]
 training = anthropometry[ inTrain,]
 
-trainCtrlGlm <- trainControl(method = "cv", savePredictions = "none", number=5)
-trainCtrlOthers <- trainControl(method = "cv", savePredictions = "none", number=2)
+trainCtrl <- trainControl(method = "cv", savePredictions = "none", number=3)
 
-glmFit <- train(height ~ ., method="glm", data=training, trControl=trainCtrlGlm, model = FALSE)
-#rfFit <- train(height ~ ., method="rf", data=training, trControl=trainCtrlOthers, model = FALSE)
-gbmFit <- train(height ~ ., method="gbm", data=training, trControl=trainCtrlOthers, model = FALSE)
+pal <- "Set1"
 
 shinyServer(function(input, output) {
     model <- reactive({
-        data <- switch(input$modelInput, 
-                       "glm" = modFit,
-                       "gbm" = modFit,
-                       "rf" = modFit)
-        data
+        if (input$buildModelButton) {
+            selMethod <-input$modelInput
+            
+            selPred <- c()
+            if(input$addFootLength) {
+                selPred <- c(selPred, "foot_length")
+            }
+            if(input$addAge) {
+                selPred <- c(selPred, "age")
+            }
+            if(input$addGender) {
+                selPred <- c(selPred, "gender")
+            }
+            
+            if(length(selPred) == 0) {
+                return(NULL)
+            }
+            selFormula <- as.formula(paste("height", paste(selPred, collapse=" + "), sep=" ~ "))
+            modFit <- train(selFormula, method=selMethod, data=training, trControl=trainCtrl, model = FALSE)
+    
+            modFit
+        } else {
+            return(NULL)
+        }
+    })
+    output$textPrediction <-  reactive({
+        if (input$predictButton) {
+            modFit <- model()
+            if (is.null(modFit)) {
+                return("You have to build a model first.")
+            } else {
+                toPred <- data.frame(age = as.numeric(input$ageValue), foot_length = as.numeric(input$footLengthValue), gender=input$genderValue)
+                predict(modFit, toPred)
 
-#        if(nrow(brushed_data) < 2){
-#            return(NULL)
-#        }
-#        lm(Volume ~ Girth, data = brushed_data)
+            }
+        }
     })
     output$plotModel <- renderPlot({
         modFit <- model()
-        predicted <- predict(modFit, training)
-        predictedDF <- data.frame(pred_height = predicted, age=training$age)
-        g <- ggplot(training, aes(y=height)) + scale_color_brewer(palette=pal)
-        g <- g + geom_point(aes(x=age, colour=gender)) + ggtitle("Predicted Height")
-        g + geom_line(color='green', data = predictedDF, aes(x=pred_height, y=age))
-        
+        if(!is.null(modFit)){
+            predicted <- predict(modFit, training)
+            predictedDF <- data.frame(pred_height = predicted, age=training$age)
+            g <- ggplot(training, aes(y=height)) + scale_color_brewer(palette=pal)
+            g <- g + geom_point(aes(x=age, colour=gender)) + ggtitle("Predicted Height")
+            g + geom_smooth(color='green', data = predictedDF, aes(x=age, y=pred_height))
+        }
     })
     output$plot1 <- renderPlot({
-        pal <- "Set1"
         anthropometry <- anthropometry[complete.cases(anthropometry),]
         g <- ggplot(anthropometry, aes(y=height)) + scale_color_brewer(palette=pal)
         g + geom_point(aes(x=age, colour=gender)) + ggtitle("Height by Age")
-#        plot(anthropometry$height, anthropometry$age, xlab = "Height",
-#             ylab = "Age", main = "Tree Measurements",
-#             cex = 1.5, pch = 16, bty = "n")
-#        if(!is.null(model())){
-#            abline(model(), col = "blue", lwd = 2)
-#        }
     })
     output$plot2 <- renderPlot({
-        pal <- "Set1"
         anthropometry <- anthropometry[complete.cases(anthropometry),]
         g <- ggplot(anthropometry, aes(y=height)) + scale_color_brewer(palette=pal)
         g + geom_point(aes(x=foot_length, colour=gender)) + ggtitle("Height by Foot Length")
-#        plot(anthropometry$height, anthropometry$foot_length, xlab = "Height",
-#             ylab = "Foot Length", main = "Tree Measurements",
-#             cex = 1.5, pch = 16, bty = "n")
-#        if(!is.null(model())){
-#            abline(model(), col = "blue", lwd = 2)
-#        }
     })
     output$plot3 <- renderPlot({
-        pal <- "Set1"
         anthropometry <- anthropometry[complete.cases(anthropometry),]
         g <- ggplot(anthropometry, aes(y=height)) + scale_fill_brewer(palette=pal)
         g + geom_boxplot(aes(x=gender, fill=gender)) + ggtitle("Height by Gender")
-        #        plot(anthropometry$height, anthropometry$gender, xlab = "Height",
-        #             ylab = "Gender", main = "Tree Measurements",
-        #             cex = 1.5, pch = 16, bty = "n")
-        #        if(!is.null(model())){
-        #            abline(model(), col = "blue", lwd = 2)
-        #        }
     })
 })
