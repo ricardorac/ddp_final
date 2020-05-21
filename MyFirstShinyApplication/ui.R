@@ -136,7 +136,7 @@ shinyUI(fluidPage(
                   a line representing the linear model fit with the selected points."),
                 p("In this tab you just need to select points and the apllication will draw the green line representing the linear model and show its slope and intercept."),
                 h3("Source code"),
-                p("if you are interested, the sourcecode of this apllication is available on ", a(href="https://github.com/ricardorac/ddp_final/tree/master/MyFirstShinyApplication","github"),"."),
+                p("If you are interested, the sourcecode of this apllication is available on ", a(href="https://github.com/ricardorac/ddp_final/tree/master/MyFirstShinyApplication","github"),"."),
             )
         )
     )
