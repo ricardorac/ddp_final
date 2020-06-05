@@ -1,0 +1,4 @@
+.firstSlide img { position: absolute; right: 0; }
+div.firstSlide a { color: white !important; }
+div.column1.firstSlide {margin-top: 200px;}
+.reveal pre code {font-size: 1.1em;}
